@@ -137,8 +137,10 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\functional.h" />
     <ClInclude Include="src\functions.h" />
     <ClInclude Include="src\stackhandle.h" />
+    <ClInclude Include="src\traits.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dummy.cpp" />

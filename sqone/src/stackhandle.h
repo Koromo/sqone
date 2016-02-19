@@ -1,6 +1,8 @@
 #ifndef _SQONE_STACKHANDLE_H_
 #define _SQONE_STACKHANDLE_H_
 
+#include "traits.h"
+#include "functional.h"
 #include <squirrel.h>
 #include <utility>
 
@@ -76,6 +78,40 @@ namespace sqone
     {
         pushValue(vm, arg);
         pushArgments(vm, args...);
+    }
+
+    namespace detail
+    {
+        // For bindArgments()
+        template <class Args, size_t L = Args::length>
+        struct BindArgments // Any argments
+        {
+            template <class Fun, class Head = typename Args::Head, class Tails = typename Args::Tails>
+            static auto bind(HSQUIRRELVM vm, Fun fun, size_t id)
+                -> decltype(BindArgments<Tails>::bind(vm, bindHead(fun, getValue<Head>(vm, id).second), id + 1))
+            {
+                return BindArgments<Tails>::bind(vm, bindHead(fun, getValue<Head>(vm, id).second), id + 1);
+            }
+        };
+
+        template <class Args>
+        struct BindArgments<Args, 0> // No argments
+        {
+            template <class Fun>
+            static Fun bind(HSQUIRRELVM, Fun fun, size_t)
+            {
+                return fun;
+            }
+        };
+    }
+
+    /** Binds argments into function */
+    /// NOTE: "id" is positive integer
+    /// TODO: We can not to notify errors
+    template <class Fun>
+    auto bindArgments(HSQUIRRELVM vm, Fun fun)
+    {
+        return detail::BindArgments<Argments_t<Fun>>::bind(vm, fun, 2);
     }
 
     /** Stack status resetter */
