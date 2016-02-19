@@ -22,6 +22,9 @@
     <ClInclude Include="src\functional.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\classes.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\dummy.cpp">

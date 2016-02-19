@@ -10,6 +10,31 @@
 
 namespace sqone
 {
+    // Closure for function
+    /// TODO: We can not notify errors
+    template <class Fun>
+    SQInteger functionClosure(HSQUIRRELVM vm)
+    {
+        Fun* fun;
+        sq_getuserdata(vm, -1, reinterpret_cast<SQUserPointer*>(&fun), nullptr);
+        return call(vm, bindArgments(vm, *fun));
+    }
+
+    /** Define function */
+    template <class Fun>
+    bool defineFunction(HSQUIRRELVM vm, const SQChar* name, Fun fun)
+    {
+        StackResetter reset(vm);
+
+        // Create function closure
+        sq_pushroottable(vm);
+        sq_pushstring(vm, name, -1);
+        const auto usrData = sq_newuserdata(vm, sizeof(fun));
+        std::memcpy(usrData, &fun, sizeof(fun));
+        sq_newclosure(vm, functionClosure<Fun>, 1);
+        return SQ_SUCCEEDED(sq_newslot(vm, -3, SQFalse));
+    }
+
     namespace detail
     {
         // For callFunction()
@@ -29,42 +54,7 @@ namespace sqone
             return false;
         }
 
-        // Closure for function
-        /// TODO: We can not to notify errors
-        template <class Fun, class Result = Result_t<Fun>, typename std::enable_if_t<!std::is_void<Result>::value> *& = enabler>
-        SQInteger functionClosure(HSQUIRRELVM vm) // Has return value
-        {
-            Fun* fun;
-            sq_getuserdata(vm, -1, reinterpret_cast<SQUserPointer*>(&fun), nullptr);
-            pushValue(vm, bindArgments(vm, *fun)());
-            return 1;
-        }
-
-        template <class Fun, class Result = Result_t<Fun>, typename std::enable_if_t<std::is_void<Result>::value> *& = enabler>
-        SQInteger functionClosure(HSQUIRRELVM vm) // No return value
-        {
-            Fun* fun;
-            sq_getuserdata(vm, -1, reinterpret_cast<SQUserPointer*>(&fun), nullptr);
-            bindArgments(vm, *fun)();
-            return 0;
-        }
     }
-
-    /** Define function */
-    template <class Fun>
-    bool defineFunction(HSQUIRRELVM vm, const SQChar* name, Fun fun)
-    {
-        StackResetter reset(vm);
-
-        // Create function closure
-        sq_pushroottable(vm);
-        sq_pushstring(vm, name, -1);
-        const auto usrData = sq_newuserdata(vm, sizeof(fun));
-        std::memcpy(usrData, &fun, sizeof(fun));
-        sq_newclosure(vm, detail::functionClosure<Fun>, 1);
-        return SQ_SUCCEEDED(sq_newslot(vm, -3, SQFalse));
-    }
-
     /** Call function */
     template <class Result, typename std::enable_if_t<!std::is_void<Result>::value>*& = enabler, class... Args>
     std::pair<bool, Result> callFunction(HSQUIRRELVM vm, const SQChar* name, Args... args) // For has return value

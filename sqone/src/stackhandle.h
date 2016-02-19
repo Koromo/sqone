@@ -60,10 +60,10 @@ namespace sqone
     template <>
     inline std::pair<bool, bool> getValue<bool>(HSQUIRRELVM vm, int id) // For boolean
     {
-        SQBool d;
-        if (SQ_SUCCEEDED(sq_getbool(vm, id, &d)))
+        SQBool b;
+        if (SQ_SUCCEEDED(sq_getbool(vm, id, &b)))
         {
-            return std::make_pair(true, !!d);
+            return std::make_pair(true, !!b);
         }
         return std::make_pair(false, false);
     }
@@ -83,6 +83,7 @@ namespace sqone
     namespace detail
     {
         // For bindArgments()
+        /// NOTE: "id" is positive integer
         template <class Args, size_t L = Args::length>
         struct BindArgments // Any argments
         {
@@ -106,12 +107,26 @@ namespace sqone
     }
 
     /** Binds argments into function */
-    /// NOTE: "id" is positive integer
-    /// TODO: We can not to notify errors
-    template <class Fun>
+    /// TODO: We can not notify errors
+    template <class Fun, class Args = Argments_t<Fun>>
     auto bindArgments(HSQUIRRELVM vm, Fun fun)
     {
-        return detail::BindArgments<Argments_t<Fun>>::bind(vm, fun, 2);
+        return detail::BindArgments<Args>::bind(vm, fun, 2);
+    }
+
+    /** Call function and push result value into stack if has result value */
+    template <class Fun, class R = decltype(std::declval<Fun>()()), typename std::enable_if_t<!std::is_void<R>::value> *& = enabler>
+    SQInteger call(HSQUIRRELVM vm, Fun fun) // Has return value
+    {
+        pushValue(vm, fun());
+        return 1;
+    }
+
+    template <class Fun, class R = decltype(std::declval<Fun>()()), typename std::enable_if_t<std::is_void<R>::value> *& = enabler>
+    SQInteger call(HSQUIRRELVM vm, Fun fun) // No return value
+    {
+        fun();
+        return 0;
     }
 
     /** Stack status resetter */
